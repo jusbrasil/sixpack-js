@@ -1,4 +1,6 @@
 (function () {
+    "use strict";
+
     // Object.assign polyfill from https://developer.mozilla.org/en/docs/Web/JavaScript/Reference/Global_Objects/Object/assign#Polyfill
     Object.assign||Object.defineProperty(Object,"assign",{enumerable:!1,configurable:!0,writable:!0,value:function(e){"use strict";if(void 0===e||null===e)throw new TypeError("Cannot convert first argument to object");for(var r=Object(e),t=1;t<arguments.length;t++){var n=arguments[t];if(void 0!==n&&null!==n){n=Object(n);for(var o=Object.keys(Object(n)),a=0,c=o.length;c>a;a++){var i=o[a],b=Object.getOwnPropertyDescriptor(n,i);void 0!==b&&b.enumerable&&(r[i]=n[i])}}}return r}});
 
@@ -17,6 +19,17 @@
     };
     if (!on_node) {
         window.sixpack = sixpack;
+    }
+
+    var supports_promise = typeof Promise === "function";
+    function create_promise_callback(resolve, reject) {
+        return function (err, res) {
+            if (err) {
+                reject(err);
+            } else {
+                resolve(res);
+            }
+        };
     }
 
     function generate_uuidv4() {
@@ -78,6 +91,18 @@
                 force = null;
             }
 
+            var promise;
+            if (!callback && supports_promise) {
+                var promise_callback;
+                promise = new Promise(function (resolve, reject) {
+                    promise_callback = create_promise_callback(resolve, reject);
+                });
+                callback = function (err, res) {
+                    promise_callback(err, res);
+                    return promise;
+                };
+            }
+
             if (!callback) {
                 throw new Error("Callback is not specified");
             }
@@ -117,7 +142,7 @@
             if (this.user_agent) {
                 params.user_agent = this.user_agent;
             }
-            return _request(this.base_url + "/participate", params, this.timeout, function(err, res) {
+            _request(this.base_url + "/participate", params, this.timeout, function(err, res) {
                 if (err) {
                     res = {status: "failed",
                            error: err,
@@ -125,6 +150,7 @@
                 }
                 return callback(null, res);
             });
+            return promise;
         },
         convert: function(experiment_name, kpi, callback) {
             if (typeof kpi === 'function') {
@@ -132,12 +158,16 @@
                 kpi = null;
             }
 
-            if (!callback) {
-                callback = function(err) {
-                    if (err && console && console.error) {
-                        console.error(err);
-                    }
-                }
+            var promise;
+            if (!callback && supports_promise) {
+                var promise_callback;
+                promise = new Promise(function (resolve, reject) {
+                    promise_callback = create_promise_callback(resolve, reject);
+                });
+                callback = function (err, res) {
+                    promise_callback(err, res);
+                    return promise;
+                };
             }
 
             if (!experiment_name || !(/^[a-z0-9][a-z0-9\-_ ]*$/).test(experiment_name)) {
@@ -155,13 +185,14 @@
             if (kpi) {
                 params.kpi = kpi;
             }
-            return _request(this.base_url + "/convert", params, this.timeout, function(err, res) {
+            _request(this.base_url + "/convert", params, this.timeout, function(err, res) {
                 if (err) {
                     res = {status: "failed",
                            error: err};
                 }
                 return callback(null, res);
             });
+            return promise;
         }
     };
 

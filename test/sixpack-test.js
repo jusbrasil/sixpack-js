@@ -1,6 +1,8 @@
 var mocha  = require('mocha');
 var assert = require('chai').assert;
 var expect = require('chai').expect;
+var sixpack;
+var session;
 
 function createSixpackInstance(on_node) {
     if (!on_node) {
@@ -8,22 +10,29 @@ function createSixpackInstance(on_node) {
         global.window = global.window || {};
     }
     delete require.cache[require.resolve('../')]
-    return require('../');
+    sixpack = require('../');
+    session = new sixpack.Session();
+
+    // Override default base_url when the SIXPACK_BASE_URL
+    // environment variable is found.
+    if (process.env.SIXPACK_BASE_URL) {
+        session.base_url = process.env.SIXPACK_BASE_URL;
+    }
 }
 
 describe("Sixpack in node", function () {
-    var sixpack;
-    var session;
+    var _Promise = global.Promise;
+
+    before(() => {
+        delete global.Promise;
+    });
 
     beforeEach( () => {
-        sixpack = createSixpackInstance(true);
-        session = new sixpack.Session();
+        createSixpackInstance(true);
+    });
 
-        // Override default base_url when the SIXPACK_BASE_URL
-        // environment variable is found.
-        if (process.env.SIXPACK_BASE_URL) {
-            session.base_url = process.env.SIXPACK_BASE_URL;
-        }
+    after(() => {
+        global.Promise = _Promise;
     });
 
     it("should return an alternative for participate", function (done) {
@@ -241,5 +250,52 @@ describe('Sixpack in browser', () => {
         createSixpackInstance(false);
 
         expect(window.sixpack).to.be.equal(globalSixpack);
+    });
+});
+
+describe('Promise return', () => {
+    beforeEach(() => {
+        createSixpackInstance(true);
+    });
+
+    it('should return a resolved promise in participate', async () => {
+        var promise = session.participate('show-bieber', ['trolled', 'not-trolled']);
+        expect(promise).to.be.an.instanceof(Promise);
+
+        const resp = await promise
+
+        expect(resp.alternative.name).to.match(/trolled/);
+        expect(resp.status).to.equal('ok');
+    });
+
+    it('should return a rejected promise in participate', async () => {
+        try {
+            await session.participate('show-bieber', []);
+            throw new Error('Unreachable code');
+        } catch (err) {
+            expect(err.message).to.equal('Must specify at least 2 alternatives');
+        }
+    });
+
+    it('should return a resolved promise for convert', async () => {
+        session.client_id = 'mike';
+
+        await session.participate('show-bieber', ['trolled', 'not-trolled']);
+
+        var promise = session.convert('show-bieber');
+        expect(promise).to.be.an.instanceof(Promise);
+
+        const resp = await promise;
+
+        expect(resp.status).to.equal('ok');
+    });
+
+    it('should return a rejected promise in convert', async () => {
+        try {
+            await session.convert('%');
+            throw new Error('Unreachable code');
+        } catch (err) {
+            expect(err.message).to.equal('Bad experiment_name');
+        }
     });
 });

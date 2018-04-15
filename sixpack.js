@@ -27,6 +27,14 @@
         });
     }
 
+    function try_parse_json(body) {
+        try {
+            return JSON.parse(body);
+        } catch (ignored) {
+            return { status: "failed", response: body };
+        }
+    }
+
     sixpack.generate_client_id = function () {
         var client_id = generate_uuidv4();
         if (!on_node && this.persist) {
@@ -169,7 +177,7 @@
         var timed_out = false;
         var timeout_handle = setTimeout(function () {
             timed_out = true;
-            return callback(new Error("request timed out"));
+            callback(new Error("request timed out"));
         }, timeout);
 
         if (!on_node) {
@@ -179,7 +187,7 @@
             sixpack[cb] = function (res) {
                 if (!timed_out) {
                     clearTimeout(timeout_handle);
-                    return callback(null, res);
+                    callback(null, res);
                 }
             }
         }
@@ -195,25 +203,25 @@
             var req = http.get(url, function(res) {
                 var body = "";
                 res.on('data', function(chunk) {
-                    return body += chunk;
+                    body += chunk;
                 });
-                return res.on('end', function() {
+                res.on('end', function() {
                     var data;
-                    if (res.statusCode == 500) {
+                    if (res.statusCode >= 400) {
                         data = {status: "failed", response: body};
                     } else {
-                        data = JSON.parse(body);
+                        data = try_parse_json(body)
                     }
                     if (!timed_out) {
                         clearTimeout(timeout_handle);
-                        return callback(null, data);
+                        callback(null, data);
                     }
                 });
             });
             req.on('error', function(err) {
                 if (!timed_out) {
                     clearTimeout(timeout_handle);
-                    return callback(err);
+                    callback(err);
                 }
             });
         }

@@ -7,6 +7,7 @@
 
     var sixpack = (!on_node && window.sixpack) ? window.sixpack : {
         base_url: "http://localhost:5000",
+        cors_credentials: false,
         ip_address: null,
         user_agent: null,
         timeout: 1000,
@@ -43,7 +44,7 @@
         // http://stackoverflow.com/questions/5639346/shortest-function-for-reading-a-cookie-in-javascript
         var result;
         return (result = new RegExp('(?:^|; )' + encodeURIComponent(this.cookie_name) + '=([^;]*)').exec(document.cookie)) ? (result[1]) : null;
-    }
+    };
 
     sixpack.Session = function (options) {
         Object.assign(this, sixpack, options);
@@ -175,7 +176,7 @@
         if (!on_node) {
             var suffix = generate_uuidv4().replace(/-/g, '');
             var cb = "callback" + suffix;
-            params.callback = "sixpack." + cb
+            params.callback = "sixpack." + cb;
             sixpack[cb] = function (res) {
                 if (!timed_out) {
                     clearTimeout(timeout_handle);
@@ -185,10 +186,11 @@
         }
         var url = _request_uri(uri, params);
         if (!on_node) {
-            script = document.createElement('script');
+            var script = document.createElement('script');
             script.type = 'text/javascript';
             script.src = url;
             script.async = true;
+            script.crossOrigin = this.cors_credentials ? 'use-credentials' : 'anonymous';
             document.body.appendChild(script);
         } else {
             var http = require('http');

@@ -197,8 +197,7 @@
             script.async = true;
             document.body.appendChild(script);
         } else {
-            const httpModule = url.startsWith('https') ? 'https' : 'http';
-            var http = require(httpModule);
+            var http = url.startsWith('https') ? require('https') : require('http');
             var req = http.get(url, { headers: { 'Cookie': cookie } }, function(res) {
                 var body = "";
                 res.on('data', function(chunk) {

@@ -207,11 +207,11 @@
                 return res.on('end', function() {
                     var data = { status: 'failed', response: body };
 
-                    if (res.statusCode >= 200 && res.statusCode < 300) {
+                    if (res.statusCode < 500) {
                         try {
                             data = JSON.parse(body);
                         } catch (err) {
-                            // ignored
+                            console.error(err);
                         }
                     }
 

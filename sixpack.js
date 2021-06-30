@@ -16,6 +16,7 @@
         cookie_domain: null,
         ignore_alternates_warning: false,
         cookie: '',
+        debug: false,
     };
     if (!on_node) {
         window.sixpack = sixpack;
@@ -65,6 +66,16 @@
 
     sixpack.Session.prototype = {
         participate: function(experiment_name, alternatives, traffic_fraction, force, callback) {
+            if (this.debug) {
+                console.log('SixpackSession - Participate Params', {
+                    experiment_name,
+                    alternatives,
+                    traffic_fraction,
+                    force,
+                    callback,
+                    timeout: this.timeout,
+                });
+            }
             if (typeof traffic_fraction === "function") {
                 callback = traffic_fraction;
                 traffic_fraction = null;
@@ -121,7 +132,10 @@
             if (this.user_agent) {
                 params.user_agent = this.user_agent;
             }
-            return _request(this.base_url + "/participate", params, this.timeout, this.cookie, function(err, res) {
+            if (this.debug) console.log('SixpackSession - Request Params', { params, cookie: this.cookie });
+
+            if (this.debug) console.time('SixpackSession - participate request duration');
+            const result = _request(this.base_url + "/participate", params, this.timeout, this.cookie, function(err, res) {
                 if (err) {
                     res = {status: "failed",
                            error: err,
@@ -129,6 +143,8 @@
                 }
                 return callback(null, res);
             });
+            if (this.debug) console.timeEnd('SixpackSession - participate request duration');
+            return result;
         },
         convert: function(experiment_name, kpi, callback) {
             if (typeof kpi === 'function') {

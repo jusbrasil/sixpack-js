@@ -70,17 +70,6 @@
         }
     }
 
-    sixpack.logRequestTime = function(message) {
-        if (this.debug) {
-            console.time(message)
-        }
-    }
-
-    sixpack.logRequestTimeEnd = function(message) {
-        if (this.debug) {
-            console.timeEnd(message)
-        }
-    }
     sixpack.Session.prototype = {
         participate: function(experiment_name, alternatives, traffic_fraction, force, callback) {
             this.log({
@@ -150,6 +139,7 @@
             if (this.user_agent) {
                 params.user_agent = this.user_agent;
             }
+
             this.log({
                 message: 'SixpackSession - Request Params',
                 parameters: {
@@ -158,8 +148,7 @@
                 }
             })
 
-            this.logRequestTime('SixpackSession - participate request duration');
-            const result = _request(this.base_url + "/participate", params, this.timeout, this.cookie, function(err, res) {
+            return _request(this.base_url + "/participate", params, this.timeout, this.cookie, this.debug, function(err, res) {
                 if (err) {
                     res = {status: "failed",
                            error: err,
@@ -167,8 +156,6 @@
                 }
                 return callback(null, res);
             });
-            this.logRequestTimeEnd('SixpackSession - participate request duration');
-            return result;
         },
         convert: function(experiment_name, kpi, callback) {
             if (typeof kpi === 'function') {
@@ -201,7 +188,7 @@
             if (kpi) {
                 params.kpi = kpi;
             }
-            return _request(this.base_url + "/convert", params, this.timeout, this.cookie, function(err, res) {
+            return _request(this.base_url + "/convert", params, this.timeout, this.cookie, this.debug, function(err, res) {
                 if (err) {
                     res = {status: "failed",
                            error: err};
@@ -211,12 +198,36 @@
         }
     };
 
-    var _request = function(uri, params, timeout, cookie, callback) {
+    const _log_request_time = function (debug, message) {
+        if (debug) {
+          console.time(message);
+        }
+      };
+    
+    const _log_request_time_end = function (debug, message) {
+        if (debug) {
+            console.timeEnd(message);
+        }
+    };
+
+    const _log = function (debug, message, params) {
+        if (debug) {
+            if (params) {
+                console.log(message, params);
+            } else {
+                console.log(message);
+            }
+        }
+    };
+
+    var _request = function(uri, params, timeout, cookie, debug, callback) {
         var timed_out = false;
         var timeout_handle = setTimeout(function () {
             timed_out = true;
+            _log(debug, 'SixpackSession - Request Timed out');
             return callback(new Error("request timed out"));
         }, timeout);
+        _log_request_time(debug, 'SixpackSession - participate request duration');
 
         if (!on_node) {
             var suffix = generate_uuidv4().replace(/-/g, '');
@@ -255,6 +266,8 @@
                         }
                     }
 
+                    _log_request_time_end(debug, 'SixpackSession - participate request duration');
+                    _log(debug, 'SixpackSession - Request Ended: ', data);
                     if (!timed_out) {
                         clearTimeout(timeout_handle);
                         return callback(null, data);
@@ -262,6 +275,7 @@
                 });
             });
             req.on('error', function(err) {
+                _log(debug, 'SixpackSession - Request Error: ', err);
                 if (!timed_out) {
                     clearTimeout(timeout_handle);
                     return callback(err);

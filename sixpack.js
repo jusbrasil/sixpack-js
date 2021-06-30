@@ -64,18 +64,25 @@
         }
     };
 
+    sixpack.log = function({ message, parameters }) {
+        if (this.debug) {
+            console.log(message, parameters);
+        }
+    }
+
     sixpack.Session.prototype = {
         participate: function(experiment_name, alternatives, traffic_fraction, force, callback) {
-            if (this.debug) {
-                console.log('SixpackSession - Participate Params', {
+            this.log({
+                message: 'SixpackSession - Participate Params',
+                parameters: {
                     experiment_name,
                     alternatives,
                     traffic_fraction,
                     force,
                     callback,
                     timeout: this.timeout,
-                });
-            }
+                }
+            });
             if (typeof traffic_fraction === "function") {
                 callback = traffic_fraction;
                 traffic_fraction = null;
@@ -132,7 +139,13 @@
             if (this.user_agent) {
                 params.user_agent = this.user_agent;
             }
-            if (this.debug) console.log('SixpackSession - Request Params', { params, cookie: this.cookie });
+            this.log({
+                message: 'SixpackSession - Participate Params',
+                parameters: {
+                    requestParams: params,
+                    cookie: this.cookie
+                }
+            })
 
             if (this.debug) console.time('SixpackSession - participate request duration');
             const result = _request(this.base_url + "/participate", params, this.timeout, this.cookie, function(err, res) {

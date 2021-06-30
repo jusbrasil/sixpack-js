@@ -70,6 +70,17 @@
         }
     }
 
+    sixpack.logRequestTime = function(message) {
+        if (this.debug) {
+            console.time(message)
+        }
+    }
+
+    sixpack.logRequestTimeEnd = function(message) {
+        if (this.debug) {
+            console.timeEnd(message)
+        }
+    }
     sixpack.Session.prototype = {
         participate: function(experiment_name, alternatives, traffic_fraction, force, callback) {
             this.log({
@@ -140,14 +151,14 @@
                 params.user_agent = this.user_agent;
             }
             this.log({
-                message: 'SixpackSession - Participate Params',
+                message: 'SixpackSession - Request Params',
                 parameters: {
                     requestParams: params,
                     cookie: this.cookie
                 }
             })
 
-            if (this.debug) console.time('SixpackSession - participate request duration');
+            this.logRequestTime('SixpackSession - participate request duration');
             const result = _request(this.base_url + "/participate", params, this.timeout, this.cookie, function(err, res) {
                 if (err) {
                     res = {status: "failed",
@@ -156,7 +167,7 @@
                 }
                 return callback(null, res);
             });
-            if (this.debug) console.timeEnd('SixpackSession - participate request duration');
+            this.logRequestTimeEnd('SixpackSession - participate request duration');
             return result;
         },
         convert: function(experiment_name, kpi, callback) {

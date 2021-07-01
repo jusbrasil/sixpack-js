@@ -213,11 +213,8 @@
         } else {
             var httpModule = url.startsWith('https') ? 'https' : 'http';
             var http = eval('require')(httpModule); // using eval to skip webpack bundling and warnings
+            const options = { headers: { 'Cookie': cookie }, timeout: timeout }
 
-            const options = {
-                headers: { 'Cookie': cookie },
-                timeout: timeout
-            }
             var req = http.get(url, options, function(res) {
                 _log_request_time(debug, 'SixpackSession - participate request duration');
                 var body = "";

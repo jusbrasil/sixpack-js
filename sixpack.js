@@ -64,25 +64,8 @@
         }
     };
 
-    sixpack.log = function({ message, parameters }) {
-        if (this.debug) {
-            console.log(message, parameters);
-        }
-    }
-
     sixpack.Session.prototype = {
         participate: function(experiment_name, alternatives, traffic_fraction, force, callback) {
-            this.log({
-                message: 'SixpackSession - Participate Params',
-                parameters: {
-                    experiment_name,
-                    alternatives,
-                    traffic_fraction,
-                    force,
-                    callback,
-                    timeout: this.timeout,
-                }
-            });
             if (typeof traffic_fraction === "function") {
                 callback = traffic_fraction;
                 traffic_fraction = null;
@@ -139,14 +122,6 @@
             if (this.user_agent) {
                 params.user_agent = this.user_agent;
             }
-
-            this.log({
-                message: 'SixpackSession - Request Params',
-                parameters: {
-                    requestParams: params,
-                    cookie: this.cookie
-                }
-            })
 
             return _request(this.base_url + "/participate", params, this.timeout, this.cookie, this.debug, function(err, res) {
                 if (err) {
@@ -221,23 +196,12 @@
     };
 
     var _request = function(uri, params, timeout, cookie, debug, callback) {
-        var timed_out = false;
-        var timeout_handle = setTimeout(function () {
-            timed_out = true;
-            _log(debug, 'SixpackSession - Request Timed out');
-            return callback(new Error("request timed out"));
-        }, timeout);
-        _log_request_time(debug, 'SixpackSession - participate request duration');
-
         if (!on_node) {
             var suffix = generate_uuidv4().replace(/-/g, '');
             var cb = "callback" + suffix;
             params.callback = "sixpack." + cb;
             sixpack[cb] = function (res) {
-                if (!timed_out) {
-                    clearTimeout(timeout_handle);
-                    return callback(null, res);
-                }
+                return callback(null, res);
             }
         }
         var url = _request_uri(uri, params);
@@ -250,7 +214,13 @@
         } else {
             var httpModule = url.startsWith('https') ? 'https' : 'http';
             var http = eval('require')(httpModule); // using eval to skip webpack bundling and warnings
-            var req = http.get(url, { headers: { 'Cookie': cookie } }, function(res) {
+
+            const options = {
+                headers: { 'Cookie': cookie },
+                timeout: timeout
+            }
+            var req = http.get(url, options, function(res) {
+                _log_request_time(debug, 'SixpackSession - participate request duration');
                 var body = "";
                 res.on('data', function(chunk) {
                     return body += chunk;
@@ -268,18 +238,18 @@
 
                     _log_request_time_end(debug, 'SixpackSession - participate request duration');
                     _log(debug, 'SixpackSession - Request Ended: ', data);
-                    if (!timed_out) {
-                        clearTimeout(timeout_handle);
-                        return callback(null, data);
-                    }
+                    return callback(null, data);
                 });
             });
+            req.on('timeout', function () {
+                _log(debug, `SixpackSession - Request Timeout - ${options.timeout}ms expired.`);
+                req.destroy();
+            });
             req.on('error', function(err) {
-                _log(debug, 'SixpackSession - Request Error: ', err);
-                if (!timed_out) {
-                    clearTimeout(timeout_handle);
-                    return callback(err);
+                if (req.connection.destroyed) {
+                    return callback(new Error('request timed out'));
                 }
+                return callback(err);
             });
         }
     };

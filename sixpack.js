@@ -122,7 +122,6 @@
             if (this.user_agent) {
                 params.user_agent = this.user_agent;
             }
-
             return _request(this.base_url + "/participate", params, this.timeout, this.cookie, this.debug, function(err, res) {
                 if (err) {
                     res = {status: "failed",

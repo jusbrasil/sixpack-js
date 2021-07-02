@@ -184,16 +184,6 @@
         }
     };
 
-    const _log = function (debug, message, params) {
-        if (debug) {
-            if (params) {
-                console.log(message, params);
-            } else {
-                console.log(message);
-            }
-        }
-    };
-
     var _request = function(uri, params, timeout, cookie, debug, callback) {
         if (!on_node) {
             var suffix = generate_uuidv4().replace(/-/g, '');
@@ -233,12 +223,10 @@
                     }
 
                     _log_request_time_end(debug, 'SixpackSession - participate request duration');
-                    _log(debug, 'SixpackSession - Request Ended: ', data);
                     return callback(null, data);
                 });
             });
             req.on('timeout', function () {
-                _log(debug, `SixpackSession - Request Timeout - ${options.timeout}ms expired.`);
                 req.destroy();
             });
             req.on('error', function(err) {

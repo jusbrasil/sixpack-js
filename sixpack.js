@@ -213,7 +213,6 @@
 
                     if (res.statusCode < 500) {
                         try {
-                            console.log("body: ", body)
                             data = JSON.parse(body);
                         } catch (err) {
                             console.error(err);

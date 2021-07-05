@@ -199,7 +199,11 @@
         } else {
             var httpModule = url.startsWith('https') ? 'https' : 'http';
             var http = eval('require')(httpModule); // using eval to skip webpack bundling and warnings
-            var req = http.get(url, { headers: { 'Cookie': cookie } }, function(res) {
+
+            const parsedUrl = eval('require')('url').parse(url);
+            const options = { ...parsedUrl, headers: { Cookie: cookie } };
+
+            var req = http.get(options, function(res) {
                 var body = "";
                 res.on('data', function(chunk) {
                     return body += chunk;
@@ -209,6 +213,7 @@
 
                     if (res.statusCode < 500) {
                         try {
+                            console.log("body: ", body)
                             data = JSON.parse(body);
                         } catch (err) {
                             console.error(err);

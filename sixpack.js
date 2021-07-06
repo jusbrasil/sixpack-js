@@ -202,14 +202,9 @@
 
             const parsedUrl = new URL(url);
             const options = {
-                protocol: parsedUrl.protocol,
-                host: parsedUrl.host,
                 port: parsedUrl.port,
                 hostname: parsedUrl.hostname,
-                search: parsedUrl.search,
-                pathname: parsedUrl.pathname,
                 path: parsedUrl.pathname + parsedUrl.search, 
-                href: parsedUrl.href,
                 headers: { Cookie: cookie }
             }
 

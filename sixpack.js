@@ -202,6 +202,7 @@
 
             var parsedUrl = new URL(url);
             var options = {
+                protocol: parsedUrl.protocol,
                 port: parsedUrl.port,
                 hostname: parsedUrl.hostname,
                 path: parsedUrl.pathname + parsedUrl.search, 
